@@ -1,0 +1,27 @@
+# Codespaces: red del host (la red bridge de Docker bloquea el tráfico entre contenedores)
+# y puente Python en lugar de Telegraf (Telegraf se trababa con ráfagas QoS 1).
+x-host: &host
+  network_mode: host
+  extra_hosts:
+    - "mosquitto:127.0.0.1"
+    - "influxdb:127.0.0.1"
+    - "alert-logger:127.0.0.1"
+services:
+  mosquitto: *host
+  influxdb: *host
+  telegraf:
+    <<: *host
+    profiles: ["desactivado"]
+  publisher: *host
+  grafana: *host
+  alert-logger: *host
+  bridge:
+    <<: *host
+    build: ./publisher
+    restart: unless-stopped
+    depends_on: [mosquitto, influxdb]
+    command: ["python", "-u", "bridge.py"]
+    environment:
+      INFLUX_TOKEN: ${INFLUX_TOKEN}
+      INFLUX_ORG: ${INFLUX_ORG}
+      INFLUX_BUCKET: ${INFLUX_BUCKET}
